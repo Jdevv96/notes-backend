@@ -1,6 +1,8 @@
 const express = require('express')
 const app = express()
 
+app.use(express.json())
+
 let notes = [
     {
       id: "1",
@@ -19,15 +21,58 @@ let notes = [
     }
   ]
 
-  app.get('/', (request, response) => {
-    response.send('<h1>hello world</h1>')
+  app.get('/api/notes/:id', (request, response) => {
+    const id = request.params.id // getID
+    const note = notes.find( note => note.id === id) // find note w matching ID
+    if (note) {
+        response.json(note) 
+    } else {
+        response.status(404).end()
+    }
   })
-
 
   app.get('/api/notes', (request, response) => {
     response.json(notes)
   })
-  
+
+  app.delete('/api/notes/:id', (request, response) => {
+    const id = request.params.id
+    notes = notes.filter(note => note.id !== id)
+
+    response.status(204).end()
+  })
+
+  const generateId = () => {
+    const maxId = notes.length > 0
+    ? Math.max( ...notes.map(n => Number(n.id)))
+    : 0
+
+    return String(maxId + 1)
+  }
+
+  app.post('/api/notes', (request, response) => {
+    const body = request.body
+
+    if (!body.content) {
+        return response.status(400).json({
+            error: 'content missing'
+        })
+    }
+
+    const note = {
+        content: body.content,
+        important: Boolean(body.important) || false,
+        id: generateId()
+    }
+
+    notes = notes.concat(note)
+    response.json(note)
+  })
+
+//   app.get('/', (request, response) => {
+//     response.send('<h1>hello world</h1>')
+//   })
+
 // const app = http.createServer((request, response) => {
 //     response.writeHead(200, {'Content-Type': 'application/json'})
 //     response.end(JSON.stringify.notes)
