@@ -1,8 +1,6 @@
 const express = require('express')
 const app = express()
 
-app.use(express.json())
-
 let notes = [
     {
       id: "1",
@@ -20,6 +18,23 @@ let notes = [
       important: true
     }
   ]
+
+  const requestLogger = (request, response, next) => {
+    console.log('Method: ', request.method)
+    console.log('Path: ', request.path)
+    console.log('Body: ', request.body)
+    console.log('---')
+    next()
+  }
+
+  app.use(express.json())
+  app.use(requestLogger)
+
+  const unknownEndpoint = (request, response) => {
+    response.status(404).send({
+      error: 'unknown endpoint'
+    })
+  }
 
   app.get('/api/notes/:id', (request, response) => {
     const id = request.params.id // getID
@@ -69,14 +84,7 @@ let notes = [
     response.json(note)
   })
 
-//   app.get('/', (request, response) => {
-//     response.send('<h1>hello world</h1>')
-//   })
-
-// const app = http.createServer((request, response) => {
-//     response.writeHead(200, {'Content-Type': 'application/json'})
-//     response.end(JSON.stringify.notes)
-// })
+app.use(unknownEndpoint)
 
 const PORT = 3001
 app.listen(PORT)
