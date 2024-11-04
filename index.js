@@ -1,9 +1,8 @@
-require("dotenv").config();
 const express = require("express");
 const app = express();
-const Note = require("./models/note");
+require("dotenv").config();
 
-let notes = [];
+const Note = require("./models/note");
 
 app.use(express.static("dist"));
 
@@ -15,10 +14,20 @@ const requestLogger = (request, response, next) => {
   next();
 };
 
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message);
+
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: "malformatted id" });
+  }
+
+  next(error);
+};
+
+
 const cors = require("cors");
 
 app.use(cors());
-
 app.use(express.json());
 app.use(requestLogger);
 
@@ -27,20 +36,6 @@ const unknownEndpoint = (request, response) => {
     error: "unknown endpoint",
   });
 };
-
-// GET ALL
-app.get("/api/notes", (request, response) => {
-  Note.find({}).then((notes) => {
-    response.json(notes);
-  });
-});
-
-// GET BY ID
-app.get("/api/notes/:id", (request, response) => {
-  Note.findById(request.params.id).then(note => {
-    response.json(note);
-  });
-});
 
 // CREATE
 app.post("/api/notes", (request, response) => {
@@ -62,15 +57,36 @@ app.post("/api/notes", (request, response) => {
   });
 });
 
+// GET ALL
+app.get("/api/notes", (request, response) => {
+  Note.find({}).then((notes) => {
+    response.json(notes);
+  });
+});
+
+// GET BY ID
+app.get("/api/notes/:id", (request, response, next) => {
+  Note.findById(request.params.id)
+    .then((note) => {
+      if (note) {
+        response.json(note);
+      } else {
+        response.status(404).end();
+      }
+    })
+    .catch((error) => next(error));
+});
+
 // DELETE BY ID
 app.delete("/api/notes/:id", (request, response) => {
-  const id = Number(request.params.id)
-  notes = notes.filter(note => note.id !== id);
+  const id = Number(request.params.id);
+  notes = notes.filter((note) => note.id !== id);
 
   response.status(204).end();
 });
 
 app.use(unknownEndpoint);
+app.use(errorHandler);
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
